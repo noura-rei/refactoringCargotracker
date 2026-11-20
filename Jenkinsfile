@@ -23,7 +23,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('CargoTracker-SonarQube') {
+                withSonarQubeEnv('CargoTracker') {
                     sh '''
                         ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
                         -Dsonar.projectKey=cargotracker \
