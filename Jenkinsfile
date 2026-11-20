@@ -26,7 +26,7 @@ pipeline {
                 withSonarQubeEnv('CargoTracker') {
                     sh '''
                         ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-                        -Dsonar.projectKey=cargotracker \
+                       -Dsonar.projectKey=CargoTracker
                         -Dsonar.projectName=CargoTracker \
                         -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
                     '''
