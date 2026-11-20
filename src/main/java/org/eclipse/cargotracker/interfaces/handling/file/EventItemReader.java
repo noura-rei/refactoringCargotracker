@@ -9,17 +9,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.eclipse.cargotracker.application.util.DateConverter;
-import org.eclipse.cargotracker.domain.model.cargo.TrackingId;
-import org.eclipse.cargotracker.domain.model.handling.HandlingEvent;
-import org.eclipse.cargotracker.domain.model.location.UnLocode;
-import org.eclipse.cargotracker.domain.model.voyage.VoyageNumber;
-import org.eclipse.cargotracker.interfaces.handling.HandlingEventRegistrationAttempt;
 
 @Dependent
 @Named("EventItemReader")
@@ -28,6 +20,7 @@ public class EventItemReader extends AbstractItemReader {
   private static final String UPLOAD_DIRECTORY = "upload_directory";
 
   @Inject private Logger logger;
+  @Inject private EventLineParser eventLineParser;
 
   @Inject private JobContext jobContext;
   private EventFilesCheckpoint checkpoint;
@@ -71,7 +64,7 @@ public class EventItemReader extends AbstractItemReader {
 
       if (line != null) {
         this.checkpoint.setFilePointer(currentFile.getFilePointer());
-        return parseLine(line);
+        return eventLineParser.parse(line);
       } else {
         logger.log(
             Level.INFO, "Finished processing file, deleting: {0}", this.checkpoint.currentFile());
@@ -91,62 +84,6 @@ public class EventItemReader extends AbstractItemReader {
     } else {
       return null;
     }
-  }
-
-  private Object parseLine(String line) throws EventLineParseException {
-    String[] result = line.split(",");
-
-    if (result.length != 5) {
-      throw new EventLineParseException("Wrong number of data elements", line);
-    }
-
-    LocalDateTime completionTime = null;
-
-    try {
-      completionTime = DateConverter.toDateTime(result[0]);
-    } catch (DateTimeParseException e) {
-      throw new EventLineParseException("Cannot parse completion time", e, line);
-    }
-
-    TrackingId trackingId = null;
-
-    try {
-      trackingId = new TrackingId(result[1]);
-    } catch (NullPointerException e) {
-      throw new EventLineParseException("Cannot parse tracking ID", e, line);
-    }
-
-    VoyageNumber voyageNumber = null;
-
-    try {
-      if (!result[2].isBlank()) {
-        voyageNumber = new VoyageNumber(result[2]);
-      }
-    } catch (NullPointerException e) {
-      throw new EventLineParseException("Cannot parse voyage number", e, line);
-    }
-
-    UnLocode unLocode = null;
-
-    try {
-      unLocode = new UnLocode(result[3]);
-    } catch (IllegalArgumentException | NullPointerException e) {
-      throw new EventLineParseException("Cannot parse UN location code", e, line);
-    }
-
-    HandlingEvent.Type eventType = null;
-
-    try {
-      eventType = HandlingEvent.Type.valueOf(result[4]);
-    } catch (IllegalArgumentException | NullPointerException e) {
-      throw new EventLineParseException("Cannot parse event type", e, line);
-    }
-
-    HandlingEventRegistrationAttempt attempt =
-        new HandlingEventRegistrationAttempt(
-            LocalDateTime.now(), completionTime, trackingId, voyageNumber, eventType, unLocode);
-
-    return attempt;
   }
 
   private void closeCurrentFile() throws IOException {
